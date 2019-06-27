@@ -1,0 +1,100 @@
+ Excel から Redmine の情報を取得する方法
+Excel VBA Redmine
+
+Excel マクロ(VBA)で Redmine の情報を取得して、表にまとめる方法を考えてみました。
+
+よくあるかもしれない質問
+
+Q. なんで Excel でやろうと思った？
+A. そこに Excel があったから。
+
+手っ取り早く試してみたい方
+
+サンプルを置いておいたので、こちらをご利用ください。
+http://hp.vector.co.jp/authors/VA049605/etc/redmine.xls
+
+また、コードは GitHub Gist にも置いています。
+https://gist.github.com/YujiSoftware/5429273
+
+サンプル実行手順
+
+    マクロの Module1 → API という変数を、ご利用の Redmine の URL に書き換えて下さい。
+    Redmine の設定でAPIアクセスキーが必要になっている場合は、以下の URL を参考に API アクセスキーを取得して、マクロの「xxxxxxxx」となっている部分を書き換えて下さい。
+        Redmine REST API - r-labs
+    最後に、表の「更新」ボタンを押してください。
+
+うまくいくと、こんな感じになります。
+f:id:chiheisen:20130421190551p:image
+
+やっていること
+
+Redmine から REST API という機能で情報を取得しています。
+これ自体は、以下のような URL にアクセスするだけです。
+
+'チケット #1234 の情報を取得する
+http://192.168.1.101/redmine/issues/1234.xml
+
+
+これを、以下の記事を参考に MSXML2.DOMDocument で読み込んで、パースしています。
+VBA XMLデータをDOMで扱う方法 - SMILEJAPAN プログラミングメモ
+
+改造する場合
+
+ほかにも、チケットに関する情報は取得できます。
+どんな情報がとれるかは、以下の方法でわかります。
+
+    REST API の URL (http://192.168.1.101/redmine/issues/1234.xml のようなアドレス) をブラウザで直接開いて中身を見る
+    Redmine の Wiki を参照する
+        Rest api - Redmine
+        Redmine REST API - r-labs (上記の日本語情報、ただしちょっと古いです)
+
+まとめ
+
+Excel マクロ(VBA)は、めんどくさいです…。簡単・便利です！
+
+2013/04/23 追記：
+
+もともと、JSONデータを取得して行うようにしていたのですが、これだと複雑になるうえ 64ビット版の Windows 上で動く Excel だとうまく動きませんでした。
+
+    64ビット環境でのScriptControlの代わり - 初心者備忘録
+    VBAでスクリプトエンジンを直接動かす - にじうら専用ブラウザ 2B 配布場所
+
+
+そのため、XMLデータを取得するやり方に全面的に書き換えました。
+以前のJSONデータを取得する方法は、下記（続きを読む）に残しておきます。
+
+
+
+やること、その1 - Redmine の情報取得
+
+まずは、Redmine から情報を取得します。
+これ自体は、REST API という機能があるので、以下のような URL にアクセスするだけです。
+
+'チケット #1234 の情報を取得する
+http://192.168.1.101/redmine/issues/1234.json
+
+
+この処理は、以下を参考にさせていただきました。
+
+    Excel から、上記のJSONデータを取得する処理
+        ExcelのVBAでJSON形式のデータを解析する - Symfoware
+    JSONデータを、VBでオブジェクトとして取得する処理
+        VBAでJSONファイルをパースする - SO NOTE そうのて (；^ω^)
+
+やること、その2 - JSONデータを表に設定
+
+続いて、JSONデータを表に設定していきます。
+
+通常であれば、 data.issue.name というように、JavaScript でオブジェクトを扱うのと同じ要領でデータを取得できるんですが、ここでVB固有の問題が。
+これだと、「name」とか「subject」といったプロパティにはアクセスできないんです…。*1
+
+しょうがないので、CallByName 関数を使って、プロパティにアクセスします。
+
+Dim data As Object
+Set data = GetJsonData(API + id + ".json")
+
+Cells(i, 2) = CallByName(data.issue.tracker, "name", VbGet)
+
+*1:どういう名前がNGなのかは、よく分かりませんでした。VBAの予約語が該当するという話もあったんですが、subject は予約語ではないのにエラーになりました。
+
+YujiSoftware (id:chiheisen) 6年前 
