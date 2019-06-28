@@ -1,0 +1,566 @@
+
+RedmineのREST API (PUT)でチケットを更新するExcel VBAのサンプル
+
+RedmineVBA
+
+
+?6
+
+?
+
+
+
+
+概要
+既存のRedmineチケットをREST API (PUT)経由で更新するExcelマクロ(VBA)のサンプル。
+
+
+コード
+
+Option Explicit
+
+Public Const REDMINE_URL As String = "http://myserver/redmine/"
+
+Public Sub Test1()
+
+    Dim requestStatus As String
+    requestStatus = UpdateIssue( _
+        1, _
+        "94811293a201319fbaea04af5c0fd8a52b06c65f", _
+        "説明の更新テスト", _
+        "注記の追加テスト")
+    MsgBox requestStatus
+
+End Sub
+
+Public Function UpdateIssue( _
+    ByVal issueId As Integer, _
+    ByVal apiKey As String, _
+    ByVal description As String, _
+    ByVal notes As String) As String
+
+    Dim sendBody As Variant
+    sendBody = "<?xml version=""1.0""?><issue>"
+    If Len(Trim(description)) > 0 Then
+        sendBody = sendBody & "<description>" & description & "</description>"
+    End If
+    If Len(Trim(notes)) > 0 Then
+        sendBody = sendBody & "<notes>" & notes & "</notes>"
+    End If
+    sendBody = sendBody & "</issue>"
+
+    Dim xmlHttp As New MSXML2.XMLHTTP60
+    With xmlHttp
+        .Open "PUT", REDMINE_URL & "issues/" & CStr(issueId) & ".xml?key=" & apiKey, False
+        .SetRequestHeader "Content-Type", "text/xml"
+        .Send sendBody
+        UpdateIssue = CStr(.Status)
+    End With
+    Set xmlHttp = Nothing
+
+End Function
+
+
+
+補足
+?参照設定で「Microsoft XML, v6.0」を選択する必要がある。
+vba_references.png
+
+
+?このサンプルでは説明(description)の更新と注記(notes)の追加を試したが、それ以外のParametersも指定できるはず。
+ 参考 http://www.redmine.org/projects/redmine/wiki/Rest_Issues#Updating-an-issue
+
+
+
+
+----------------------------------------------------------------------
+
+
+Redmine
+
+
+概要
+
+
+Download
+
+
+活動
+
+
+ロードマップ
+
+
+チケット
+
+
+ニュース
+
+
+Wiki
+
+
+フォーラム
+
+
+リポジトリ
+
+
+
+ 
+Latest releases
+
+4.0.4 (2019-06-10)
+3.4.11 (2019-06-10)
+ 
+Resources
+
+User's Guide
+Developer's Guide
+Changelog, Security
+FAQ, HowTo's
+Plugins, Themes
+Privacy Policy
+
+Wiki
+メインページ
+索引(名前順)
+索引(日付順)
+
+ 
+
+ 
+
+
+履歴 
+
+Guide ? Developer Guide ? Rest api ? 
+
+ 
+Issues
+IssuesListing issues
+Showing an issue
+Creating an issue
+Updating an issue
+Deleting an issue
+Adding a watcher
+Removing a watcher
+
+ 
+Listing issues
+GET /issues.[format]
+
+Returns a paginated list of issues. By default, it returns open issues only.
+
+Parameters:
+?offset: skip this number of issues in response (optional)
+?limit: number of issues per page (optional)
+?sort: column to sort with. Append :desc to invert the order.
+?include: fetch associated data (optional, use comma to fetch multiple associations). Some possible values (for full list see below): ?attachments - Since 3.4.0
+?relations
+?journals
+?children
+
+
+Optional filters:
+?issue_id: get issue with the given id or multiple issues by id using ',' to separate id.
+?project_id: get issues from the project with the given id (a numeric value, not a project identifier).
+?subproject_id: get issues from the subproject with the given id. You can use project_id=XXX&subproject_id=!* to get only the issues of a given project and none of its subprojects.
+?tracker_id: get issues from the tracker with the given id
+?status_id: get issues with the given status id only. Possible values: open, closed, * to get open and closed issues, status id
+?assigned_to_id: get issues which are assigned to the given user id. me can be used instead an ID to fetch all issues from the logged in user (via API key or HTTP auth)
+?parent_id: get issues whose parent issue is given id.
+?cf_x: get issues with the given value for custom field with an ID of x. (Custom field must have 'used as a filter' checked.)
+?...
+
+NB: operators containing ">", "<" or "=" should be hex-encoded so they're parsed correctly. Most evolved API clients will do that for you by default, but for the sake of clarity the following examples have been written with no such magic feature in mind.
+
+Examples:
+GET /issues.xml
+GET /issues.xml?issue_id=1
+GET /issues.xml?issue_id=1,2
+GET /issues.xml?project_id=2
+GET /issues.xml?project_id=2&tracker_id=1
+GET /issues.xml?assigned_to_id=6
+GET /issues.xml?assigned_to_id=me
+GET /issues.xml?status_id=closed
+GET /issues.xml?status_id=*
+GET /issues.xml?cf_1=abcdef
+GET /issues.xml?sort=category:desc,updated_on
+
+Paging example:
+GET /issues.xml?offset=0&limit=100
+GET /issues.xml?offset=100&limit=100
+
+To fetch issues for a date range (uncrypted filter is "><2012-03-01|2012-03-07") :
+GET /issues.xml?created_on=%3E%3C2012-03-01|2012-03-07
+
+To fetch issues created after a certain date (uncrypted filter is ">=2012-03-01") :
+GET /issues.xml?created_on=%3E%3D2012-03-01
+
+Or before a certain date (uncrypted filter is "<= 2012-03-07") :
+GET /issues.xml?created_on=%3C%3D2012-03-07
+
+To fetch issues created after a certain timestamp (uncrypted filter is ">=2014-01-02T08:12:32Z") :
+GET /issues.xml?created_on=%3E%3D2014-01-02T08:12:32Z
+
+To fetch issues updated after a certain timestamp (uncrypted filter is ">=2014-01-02T08:12:32Z") :
+GET /issues.xml?updated_on=%3E%3D2014-01-02T08:12:32Z
+
+To fetch issues for which custom field 4 contains the substring "foo" :
+GET /issues.xml?cf_4=~foo
+
+
+Response:
+<?xml version="1.0" encoding="UTF-8"?>
+<issues type="array" count="1640">
+  <issue>
+    <id>4326</id>
+    <project name="Redmine" id="1"/>
+    <tracker name="Feature" id="2"/>
+    <status name="New" id="1"/>
+    <priority name="Normal" id="4"/>
+    <author name="John Smith" id="10106"/>
+    <category name="Email notifications" id="9"/>
+    <subject>
+      Aggregate Multiple Issue Changes for Email Notifications
+    </subject>
+    <description>
+      This is not to be confused with another useful proposed feature that
+      would do digest emails for notifications.
+    </description>
+    <start_date>2009-12-03</start_date>
+    <due_date></due_date>
+    <done_ratio>0</done_ratio>
+    <estimated_hours></estimated_hours>
+    <custom_fields>
+      <custom_field name="Resolution" id="2">Duplicate</custom_field>
+      <custom_field name="Texte" id="5">Test</custom_field>
+      <custom_field name="Boolean" id="6">1</custom_field>
+      <custom_field name="Date" id="7">2010-01-12</custom_field>
+    </custom_fields>
+    <created_on>Thu Dec 03 15:02:12 +0100 2009</created_on>
+    <updated_on>Sun Jan 03 12:08:41 +0100 2010</updated_on>
+  </issue>
+  <issue>
+    <id>4325</id>
+    ...
+  </issue>
+</issues>
+
+ 
+Showing an issue
+GET /issues/[id].[format]
+
+
+Parameters:
+?include: fetch associated data (optional, use comma to fetch multiple associations). Possible values: ?children
+?attachments
+?relations
+?changesets
+?journals - See Issue journals for more information.
+?watchers - Since 2.3.0
+
+
+Examples:
+GET /issues/2.xml
+GET /issues/2.json
+
+GET /issues/2.xml
+GET /issues/2.xml?include=attachments
+GET /issues/2.xml?include=attachments,journals
+
+ 
+Creating an issue
+POST /issues.[format]
+
+Parameters:
+?issue - A hash of the issue attributes: ?project_id
+?tracker_id
+?status_id
+?priority_id
+?subject
+?description
+?category_id
+?fixed_version_id - ID of the Target Versions (previously called 'Fixed Version' and still referred to as such in the API)
+?assigned_to_id - ID of the user to assign the issue to (currently no mechanism to assign by name)
+?parent_issue_id - ID of the parent issue
+?custom_fields - See Custom fields
+?watcher_user_ids - Array of user ids to add as watchers (since 2.3.0)
+?is_private - Use true or false to indicate whether the issue is private or not
+?estimated_hours - Number of hours estimated for issue
+
+
+Attachments can be added when you create an issue, see Attaching files.
+
+Examples:
+POST /issues.xml
+<?xml version="1.0"?>
+<issue>
+  <project_id>1</project_id>
+  <subject>Example</subject>
+  <priority_id>4</priority_id>
+</issue>
+
+
+POST /issues.json
+
+
+{
+  "issue": {
+    "project_id": 1,
+    "subject": "Example",
+    "priority_id": 4
+  }
+}
+
+ 
+Updating an issue
+PUT /issues/[id].[format]
+
+Parameters:
+?issue - A hash of the issue attributes ?project_id
+?tracker_id
+?status_id
+?subject
+?...
+?notes - Comments about the update
+?private_notes - true if notes are private
+
+
+Attachments can be added when you update an issue, see Attaching files.
+
+Examples:
+PUT /issues/[id].xml
+
+<?xml version="1.0"?>
+<issue>
+  <subject>Subject changed</subject>
+  <notes>The subject was changed</notes>
+</issue>
+
+PUT /issues/[id].json
+
+{
+  "issue": {
+    "subject": "Subject changed",
+    "notes": "The subject was changed" 
+  }
+}
+
+ 
+Deleting an issue
+DELETE /issues/[id].[format]
+ 
+Adding a watcher
+
+Added in 2.3.0
+POST /issues/[id]/watchers.[format]
+
+Parameters:
+?user_id (required): id of the user to add as a watcher
+ 
+Removing a watcher
+
+Added in 2.3.0
+DELETE /issues/[id]/watchers/[user_id].[format]
+
+Parameters: none
+ 
+
+
+
+-----------------------------------------------------------------------------------------------------------
+Outlookで書いたVBAマクロは以下の通り
+
+
+CustomRuleMakeTicket.vb
+ 
+Option Explicit
+
+Const REDMINE_API_KEY = "<上記で取得したAPIキー>"
+Const REDMINE_URL = "http://localhost/redmine" '対象RedmineへのURL
+
+Const PROJECT_ID = 1
+
+Public Sub CustomRule_MakeTicket(Item As Outlook.MailItem)
+    Dim ReqStatus
+
+    ReqStatus = PostIssue(Item.Subject, Item.Body)
+
+    If ReqStatus <> False Then
+        MsgBox "登録成功"
+    Else
+        MsgBox "登録失敗"
+    End If
+End Sub
+
+' PostIssue - Redmineにチケットを登録する
+'
+' [引数]
+' Subject:  チケットの題名
+' Body:     チケットの内容
+'
+' [戻り値]
+' True:  成功
+' False: 失敗
+'
+Function PostIssue(Subject As String, Body As String)
+    Dim xhr
+    Dim RequestURL As String
+    Dim RequestBody As String
+    Dim bPmary() As Byte
+
+    RequestURL = REDMINE_URL & "/issues.xml?format=xml&key=" &
+REDMINE_API_KEY
+
+    Set xhr = CreateObject("Microsoft.XMLHTTP")
+    xhr.Open "POST", RequestURL, False
+    xhr.SetRequestHeader "Content-Type", "text/xml"
+
+    RequestBody = "<?xml version=" & Chr(34) & "1.0" & Chr(34) & "?>"
+    RequestBody = RequestBody & "<issue>"
+    RequestBody = RequestBody & "<project_id>" & PROJECT_ID & "</project_id>"
+    RequestBody = RequestBody & "<subject>" & Subject & "</subject>"
+    RequestBody = RequestBody & "<description>" & Body & "</description>"
+    RequestBody = RequestBody & "</issue>"
+
+    xhr.Send (RequestBody)
+
+    If xhr.Status = 201 Then
+        PostIssue = True
+    Else
+        PostIssue = False
+    End If
+
+End Function
+
+
+上記のマクロを登録しておき、Outlookの振り分けルールでスクリプトを実行するアクションを定義し、上記のマクロを指定すれば自動でチケット登録ができるはず
+
+-----------------------------------------------------------------------------------------------------------------------------
+RedmineのREST APIを実際に試してみたら、とても素晴らしい。
+ 分かったことをメモ書き。
+
+【元ネタ】
+Rest api - Redmine
+
+Redmine REST API - r-labs
+
+Rest Issues - Redmine
+
+コマンドラインとブラウザで JSON API を手軽に試す | COLOPL Engineers' Blog | 株式会社コロプラ【スマートフォンゲーム＆位置ゲー】
+
+RedmineのREST APIを使ってみる | 『世界』はあまりにも広い
+
+Redmine REST API の翻訳 | プログラマーズ雑記帳
+
+【1】RESTはマッシュアップというWebサービスの一つ。
+REST APIを使えば、Redmineからチケットの情報だけでなく、プロジェクトやユーザ、果てはWikiまでHTTP経由で取得できる。
+RedmineのREST APIの内容を見ると、GETメソッドだけでなく、POST・PUT・DELETEもサポートしているようだ。
+また、取得結果はXMLだけでなく、JSONにも対応している。
+つまり、JavaScriptで操作したいなら、JSONの方が楽だろう。
+
+RestAPIを使うには、Redmine REST API - r-labsのように、システム管理画面でAPIを有効にした後、個人設定画面でAPIキーを取得すればいい。
+そのAPIキーをリクエストに含めてHTTP接続すれば、欲しいチケット情報を取得できる。
+
+ブラウザ上でRESTを試すには、Firefox RESTClientやChromeのAdvanced REST clientを使えば良い。
+URLを設定するだけで、GETやPOSTを実行できる。
+ 藤原さんがBlogに書かれているように、Java製のRESTClientもあるので、ローカルPC上で試すこともできる。
+
+Rest api - Redmineによれば、下記のURLにAPIキーをセットすれば、以下のURLでデータを取得できる。
+Firefox RESTClientからPOSTして、データを登録してもいい。
+
+# 全チケットを一覧表示
+http://localhost:3000/issues.xml?key=XXXX
+
+# チケット番号2の情報を表示(カスタムフィールドも含む)
+http://localhost:3000/issues/2.xml?key=XXXX
+
+# プロジェクトID＝2の全チケット一覧を表示
+http://localhost:3000/issues.xml?project_id=2&key=XXXX
+
+# 全プロジェクトを一覧表示
+http://localhost:3000/projects.xml?key=XXXX
+
+# プロジェクトID＝2のメンバーを一覧表示
+http://localhost:3000/projects/2/memberships.xml?key=XXXX
+
+#全ユーザ一覧を表示
+http://localhost:3000/users.xml?key=XXXX
+
+# 実績工数のすべての履歴を表示
+http://localhost:3000/time_entries.xml?key=XXXX
+
+# チケット番号8470の関連チケットを表示
+http://localhost:3000/issues/8470/relations.xml?key=XXXX
+
+# fooプロジェクトの全バージョンを表示
+http://localhost:3000/projects/foo/versions.xml?key=XXXX
+
+# Wiki名「マニュアル」のWiki内容を表示(日本語名もOK)
+ http://localhost:3000/projects/foo/wiki/マニュアル.xml?key=XXXX
+
+# カスタムクエリを一覧表示
+http://localhost:3000/queries.xml?key=XXXX
+
+# システム管理画面で作成した全ステータスを一覧表示
+http://localhost:3000/issue_statuses.xml?key=XXXX
+
+# システム管理画面で作成した全トラッカーを一覧表示
+http://localhost:3000/trackers.xml?key=XXXX
+
+# システム管理画面で作成した全ての優先度を一覧表示
+http://localhost:3000/enumerations/issue_priorities.xml?key=XXXX
+
+# システム管理画面で作成した全ての作業分類を一覧表示
+http://localhost:3000/enumerations/time_entry_activities.xml?key=XXXX
+
+# プロジェクトID＝2のカテゴリを一覧表示
+http://localhost:3000/projects/2/issue_categories.xml?key=XXXX
+
+# システム管理画面で作成した全てのロールを一覧表示
+http://localhost:3000/roles.xml?key=XXXX
+
+# システム管理画面で作成した全てのユーザグループを一覧表示
+http://localhost:3000/groups.xml?key=XXXX
+
+上記のGETメソッドを見れば分かるように、Redmineにある殆どすべての情報をHTTPレスポンスで取得できる。
+このレベルまで対応したOSSのツールはあまりないのではないだろうか？
+
+【3】RestAPIの使い道としては、スマートフォンなどの他のデバイスでRedmineを操作したい時や、他システムと連携してRedmineにある開発プロジェクトの進捗や品質に関する情報を取り込む時があげられるだろう。
+
+前者の場合は、RedminePMのように、iPhoneやAndroid上でRedmineチケットを操作できる。
+ 外出先でRedmineをちょっと見たい時に便利だ。
+あるいは、Windows上に、メールソフトのようなリッチクライアントを作って、Redmineチケットの一覧を表示したり、チケットを一括更新できるような機能を作ってもいい。
+
+iPhoneアプリRedminePM: プログラマの思索
+
+後者の場合は、例えば、原価管理システムへRedmineチケットの予定・実績工数を取り込むことで、原価計算することも可能だ。
+あるいは、Redmineのチケット情報を夜間バッチで取り込んだ後に、多種多様なメトリクスを日次で蓄積して、時系列で分析するやり方も可能だ。
+つまり、経営者に日々の売上や月次のPL/BSを報告して経営判断に使うように、Redmineにある開発プロジェクトの情報を取り込んで、日次・月次のタイミングで進捗や品質に関するメトリクスを出力して、プロジェクト管理の強化に役立てることもできるはず。
+
+【4】RestAPIが有効である理由は、Redmineのようにシステムに有用な情報が蓄積されていることが前提条件だ。
+システムに蓄積されたデータが少なかったり、そもそも扱いづらいデータ構造ならば、RestAPIで提供してもあまり意味が無い。
+ 逆に言えば、有用な情報を蓄積したシステムは、RestAPIのように外部の利害関係者へAPIを公開すれば、そのAPIでWebサービスをマッシュアップしてもらうことで、ビジネスチャンスが生まれる。
+
+例えば、下記のマッシュアップ情報一覧サービスサイトを見ると、GoogleやTwitterやAmazonだけでなく、食べログやリクナビ、楽天、天気情報、書籍レビュー、ゲームレビューなどのAPIも公開されているらしい。
+
+ワッフル/WAFL｜みんなで作るWeb API&マッシュアップ情報一覧サービスサイト
+
+マッシュアップの対象として、Googleマップだけでなく食べログの情報も組み合わせたWebサービスを作ったら、面白いのではないだろうか？
+
+また、天気予報APIでは、気温や降雨量の情報を取得して、コンビニの商品の売れ筋傾向を見ることもできる。
+あるいは、湿度情報・花粉情報・ビール指数・アイスクリーム指数・素肌乾燥指数などを組み合わせて、医療品やビール、アイスクリームなどの商品を売るタイミングを見つけ出すというWebサービスもありうるだろう。
+
+天気予報API｜活用方法
+
+最近はビッグデータ活用と言われるが、これらの情報を組み合わせて、予期しない事象を見出すというクラスタ分析も簡単になった。
+アルゴリズムは既にあり、HadoopやMauhtのようなレコメンドエンジンもあるのだから、アイデアとプログラミング能力さえあれば、いくらでも新しいビジネスを創出する可能性がある。
+
+オープンソースのレコメンドエンジンMahout: プログラマの思索
+
+Redmineにもビッグデータを活用できる可能性が秘められていると思う
+
+
+
